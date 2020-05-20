@@ -28,7 +28,6 @@ const typeDefs = gql`
 const resolvers = {
   Review: {
     __resolveReference(object) {
-      console.log("🌶", object);
       return reviews.find((review) => review.id === object.id);
     },
     author(review) {

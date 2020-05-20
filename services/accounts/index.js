@@ -42,7 +42,6 @@ const resolvers = {
   },
   User: {
     __resolveReference(object) {
-      console.log("🔥", object);
       return data.User.find((user) => user.id === object.id);
     },
   },
