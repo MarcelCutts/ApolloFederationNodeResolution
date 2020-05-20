@@ -2,11 +2,20 @@ const { ApolloServer, gql } = require("apollo-server");
 const { buildFederatedSchema } = require("@apollo/federation");
 
 const typeDefs = gql`
-  extend type Query {
-    me: User
+  interface Node {
+    id: ID!
   }
 
-  type User @key(fields: "id") {
+  extend type Query {
+    me: User
+    node(id: ID!): Node
+  }
+
+  extend type Review implements Node @key(fields: "id") {
+    id: ID! @external
+  }
+
+  type User implements Node @key(fields: "id") {
     id: ID!
     name: String
     username: String
@@ -16,40 +25,55 @@ const typeDefs = gql`
 const resolvers = {
   Query: {
     me() {
-      return users[0];
-    }
+      return data.User[0];
+    },
+    node: (_root, { id }) => {
+      const [type] = id.split("-");
+
+      const entity = data[type];
+      return entity ? entity.find((u) => u.id === id) : { id };
+    },
+  },
+  Node: {
+    __resolveType: ({ id }) => {
+      const [typeName] = id.split("-");
+      return typeName;
+    },
   },
   User: {
     __resolveReference(object) {
-      return users.find(user => user.id === object.id);
-    }
-  }
+      console.log("🔥", object);
+      return data.User.find((user) => user.id === object.id);
+    },
+  },
 };
 
 const server = new ApolloServer({
   schema: buildFederatedSchema([
     {
       typeDefs,
-      resolvers
-    }
-  ])
+      resolvers,
+    },
+  ]),
 });
 
 server.listen({ port: 4001 }).then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`);
 });
 
-const users = [
-  {
-    id: "1",
-    name: "Ada Lovelace",
-    birthDate: "1815-12-10",
-    username: "@ada"
-  },
-  {
-    id: "2",
-    name: "Alan Turing",
-    birthDate: "1912-06-23",
-    username: "@complete"
-  }
-];
+const data = {
+  User: [
+    {
+      id: "User-1",
+      name: "Ada Lovelace",
+      birthDate: "1815-12-10",
+      username: "@ada",
+    },
+    {
+      id: "User-2",
+      name: "Alan Turing",
+      birthDate: "1912-06-23",
+      username: "@complete",
+    },
+  ],
+};
